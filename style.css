@@ -76,6 +76,8 @@ body::after {  /* lamp vignette */
 .die[data-v="5"] .pip:nth-child(1), .die[data-v="5"] .pip:nth-child(3), .die[data-v="5"] .pip:nth-child(5), .die[data-v="5"] .pip:nth-child(7), .die[data-v="5"] .pip:nth-child(9),
 .die[data-v="6"] .pip:nth-child(1), .die[data-v="6"] .pip:nth-child(3), .die[data-v="6"] .pip:nth-child(4), .die[data-v="6"] .pip:nth-child(6), .die[data-v="6"] .pip:nth-child(7), .die[data-v="6"] .pip:nth-child(9)
 { background: var(--die-pip); }
+/* hover: a small lift — selected dice keep their bigger one (rule below wins) */
+.die:hover { transform: translateY(-5px); }
 /* selected: lifted, red ring */
 .die.sel {
   transform: translateY(-12px);
