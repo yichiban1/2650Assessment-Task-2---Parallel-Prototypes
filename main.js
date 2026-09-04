@@ -1,4 +1,4 @@
-/* main.js — PIPS: a small dice-poker game.
+/* main.js — Rolling: a small dice game.
    Roll six dice, select some into a poker hand, play it for chips × mult,
    and clear the score target before the hands run out. Three rounds, targets rise.
    The gamble: shaking only rerolls the dice you did NOT select, so every turn is

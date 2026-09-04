@@ -1,4 +1,4 @@
-/* audio.js — PIPS sound engine.
+/* audio.js — Rolling sound engine.
    Die face 1..6 → G major pentatonic (G3 A3 B3 D4 E4 G4), so any roll sounds fine.
    All sounds are short one-shot events; nothing loops or sustains. */
 const Sound = (() => {
