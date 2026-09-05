@@ -9,7 +9,7 @@ const els = {
   table: $('table'), dice: $('diceMount'), stamp: $('stampLayer'),
   msg: $('msg'), score: $('scoreEl'), target: $('targetEl'),
   hands: $('handsEl'), rerolls: $('rerollsEl'), round: $('roundEl'),
-  pName: $('pName'), pMath: $('pMath'), playBtn: $('playBtn'),
+  pName: $('pName'), pMath: $('pMath'), playBtn: $('playBtn'), prog: $('progFill'),
   comboList: $('comboList'), end: $('end'), endName: $('endName'),
   endStats: $('endStats'),
 };
@@ -67,6 +67,10 @@ function renderMeta() {
   els.rerolls.textContent = S.shakes;
   els.round.textContent = (S.round + 1) + '/' + ROUNDS.length;
   els.playBtn.disabled = !currentCombo();
+  updateProgress();
+}
+function updateProgress() {
+  els.prog.style.width = Math.min(100, S.score / S.target * 100) + '%';
 }
 function renderPreview() {
   const c = currentCombo();
@@ -228,7 +232,7 @@ function countScore(from, to) {
   let v = from;
   const iv = setInterval(() => {
     v = Math.min(to, v + Math.max(1, Math.ceil((to - from) / 22)));
-    S.score = v; els.score.textContent = v;
+    S.score = v; els.score.textContent = v; updateProgress();
     if (v >= to) {
       clearInterval(iv);
       counting = false;
