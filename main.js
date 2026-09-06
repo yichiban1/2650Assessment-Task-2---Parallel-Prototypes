@@ -74,7 +74,11 @@ function updateProgress() {
 }
 function renderPreview() {
   const c = currentCombo();
-  document.querySelectorAll('.crow').forEach(r => r.classList.toggle('on', !!c && c.key === r.dataset.t));
+  const can = formable();
+  document.querySelectorAll('.crow').forEach(r => {
+    r.classList.toggle('on', !!c && c.key === r.dataset.t);
+    r.classList.toggle('can', can.has(r.dataset.t));
+  });
   if (!c) {
     els.pName.textContent = '—';
     els.pMath.textContent = '';
@@ -83,6 +87,17 @@ function renderPreview() {
   const chips = TYPES[c.key].base + c.sum * PIP_CHIPS;
   els.pName.textContent = TYPES[c.key].name;
   els.pMath.textContent = chips + ' × ' + TYPES[c.key].mult;
+}
+/* which hands the table dice could still make — 64 subsets is cheap to brute-force */
+function formable() {
+  const keys = new Set();
+  for (let mask = 1; mask < 64; mask++) {
+    const vals = [];
+    for (let i = 0; i < 6; i++) if (mask & (1 << i)) vals.push(S.vals[i]);
+    const c = detect(vals);
+    if (c && c.key !== 'high') keys.add(c.key);
+  }
+  return keys;
 }
 const msg = t => els.msg.textContent = t;
 function stamp(text, cls = '') {
