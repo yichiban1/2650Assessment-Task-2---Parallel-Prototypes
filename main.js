@@ -144,7 +144,7 @@ function toggleSelect(i) {
   if (!S || S.rolling || counting || S.phase !== 'PLAY') return;
   const wasValid = !!currentCombo();
   try {
-    if (S.d[i] === null) { S.d[i] = S.vals[i]; Sound.pick(S.vals[i]); }
+    if (S.d[i] === null) { S.d[i] = S.vals[i]; Sound.pick(S.vals[i], selected()); }
     else { S.d[i] = null; Sound.unpick(S.vals[i]); }
     if (!wasValid && !!currentCombo()) Sound.confirm();
     Sound.setLocks(selected());   /* locked dice take the spotlight in the bed */

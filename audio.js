@@ -118,9 +118,12 @@ const Sound = (() => {
   function touch()         { if (on) lastTouch = Tone.now(); }      /* any action wakes the box */
 
   /* ---- picking ---- */
-  function pick(v) {           /* selected: its note rings once, then lives in the figure */
+  function pick(v, vals) {     /* selected: the whole selection rolls out as a quick ascending riff —
+                                  the player hears what they just played, like strumming a chord */
     if (!on) return;
-    box.triggerAttackRelease(N(PENT[v - 1]), 0.15, Tone.now(), 0.3);
+    const t = Tone.now();
+    const ns = (vals && vals.length ? vals : [v]).map(x => PENT[x - 1]).sort((a, b) => a - b);
+    ns.forEach((m, i) => box.triggerAttackRelease(N(m), 0.18, t + i * 0.06, 0.24));
   }
   function unpick(v) {         /* released: softer, an octave down */
     if (!on) return;
