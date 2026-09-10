@@ -1,18 +1,65 @@
 /* audio.js — Rolling sound engine.
    Die face 1..6 → G major pentatonic (G4 A4 B4 D5 E5 G5), so any roll sounds fine.
-   One instrument only: a music box (soft sine plucks). Every tonal sound — clicks,
-   hand runs, count-up, endings — plays on it, so the whole game speaks one voice.
-   The bed is NOT a loop of pre-made bars: it reads the game every bar — sleeps
-   when the player is idle, gets busier as the target nears, tighter as hands
-   run out, and every roll reshuffles the bar's layout. */
+   One instrument only: a music box (soft sine plucks) — bass, chords and melody
+   are just registers of that one voice.
+   The bed is generative, not pre-made bars: every roll re-keys it. The hand lying
+   on the table picks the chord (a pair is a bare fifth, a triple a triad, a full
+   house a thick stack — rarer hand, bigger chord), the dice you lock in rewrite
+   the melody figure, and after a hand banks the bed answers with that figure an
+   octave up. It sleeps when the player is idle, busies itself as the target nears
+   and tightens as hands run out. */
 const Sound = (() => {
   let on = false, box, master, rev, mem, hatGain, bp;
   const PENT = [67, 69, 71, 74, 76, 79];           /* G4 A4 B4 D5 E5 G5 */
   const N = m => Tone.Frequency(m, 'midi').toNote();
-  let bedNotes = [55, 62, 67, 74];                 /* fallback until the first roll lands */
-  let locks = [];                                  /* dice the player selected — the box features these */
+  /* the pentatonic laid out over two octaves — chords are built as scale degrees
+     from a root, so every voicing stays inside the key no matter what it roots on */
+  const LAD = [55, 57, 59, 62, 64, 67, 69, 71, 74, 76, 79, 81, 83, 86, 88, 91];
+  const deg = (root, k) => LAD[Math.max(0, Math.min(LAD.length - 1, LAD.indexOf(root) + k))];
+  /* chord shape per hand type, in degrees above the root: loose dice are a
+     searching fourth, a pair an open fifth, triples a triad, straights run the
+     scale, and the rare hands stack up thick */
+  const SHAPES = {
+    loose:    [0, 3],
+    pair:     [0, 4],
+    twoPair:  [0, 3, 4],
+    three:    [0, 2, 4],
+    str:      [0, 1, 2, 3, 4],
+    threeStr: [0, 1, 2, 3, 4, 6],
+    full:     [0, 2, 4, 5],
+    four:     [0, 2, 4, 6],
+    five:     [0, 2, 4, 5, 6],
+  };
+  let chord = { root: 67, tones: [67, 74] };       /* the harmony the table is lying in */
+  let motif = [67, 74, 71];                        /* the figure the bed plays and develops */
+  let land = 79;                                   /* root of the last hand played — where multHit lands */
   let mood = { p: 0, u: 0 };                       /* progress to target / urgency from hands left */
   let lastTouch = 0;                               /* any player action wakes the box */
+
+  /* the table's harmony: straights root on their low end, everything else roots
+     on the most repeated die — a pair of 4s literally re-keys the bed onto D */
+  function harmony(vals, key) {
+    const shape = SHAPES[key] || SHAPES.loose;
+    let rv = vals[0];
+    if (key === 'str' || key === 'threeStr') rv = Math.min(...vals);
+    else {
+      const cnt = {}; vals.forEach(v => cnt[v] = (cnt[v] || 0) + 1);
+      let best = 0;
+      Object.keys(cnt).forEach(v => {
+        if (cnt[v] > best || (cnt[v] === best && +v > +rv)) { best = cnt[v]; rv = +v; }
+      });
+    }
+    const root = PENT[rv - 1];
+    return { root, tones: shape.map(k => deg(root, k)) };
+  }
+  /* the fallback figure, drawn from the chord — order flips with every roll */
+  function boardMotif() {
+    const t = chord.tones;
+    if (t.length < 3) return (t[0] + t[1]) % 2 ? [t[0], t[1], t[0] + 12] : [t[1], t[0], t[1] + 12];
+    const flip = (t[0] + t[t.length - 1]) % 2;
+    return flip ? [t[0], t[t.length - 1], t[Math.floor(t.length / 2)]]
+                : [t[0], t[Math.floor(t.length / 2)], t[t.length - 1]];
+  }
 
   async function init() {
     if (on) return;
@@ -33,23 +80,21 @@ const Sound = (() => {
     hatGain = new Tone.Gain(0); bp = new Tone.Filter(1600, 'bandpass');
     noise.connect(hatGain); hatGain.connect(bp); bp.connect(master);
     /* the bed: reads the game fresh every bar — never the same twice.
-       idle → just the root, breathing. Playing → sprinkles. The closer to the
-       target (p) and the fewer hands left (u), the more slots light up. */
+       A low root breathes even when idle; the figure lands on slots that
+       reshuffle with every roll; the closer to the target (p) and the fewer
+       hands left (u), the more of the figure gets played. */
     Tone.Transport.bpm.value = 76;
     new Tone.Loop(t => {
-      const ns = [...bedNotes].sort((a, b) => a - b);
-      const lk = [...locks].sort((a, b) => a - b);
       const idle = Tone.now() - lastTouch > 12;
       const p = idle ? 0 : mood.p, u = idle ? 0 : mood.u;
-      const busy = idle ? 0 : Math.min(4, 1 + Math.round(p * 2 + u * 1.5));
-      const slots = [0.75, 1.5, 2.5, 3.25];
-      const off = (ns[0] + ns[ns.length - 1]) % 4;         /* each roll shuffles the layout */
-      box.triggerAttackRelease(N(ns[0] - 12), 0.8, t, 0.16 + p * 0.06);   /* the root, always */
+      const busy = idle ? 1 : Math.min(4, 1 + Math.round(p * 2 + u * 1.5));
+      box.triggerAttackRelease(N(chord.root - 12), 1.4, t, idle ? 0.08 : 0.2 + p * 0.05);
+      const slots = [0.75, 1.5, 2.25, 3, 3.5];
+      const off = (chord.root + chord.tones[chord.tones.length - 1]) % slots.length;
       for (let i = 0; i < busy; i++) {
-        const s = slots[(i + off) % 4];
-        const note = lk.length ? lk[i % lk.length] + (i === 2 ? 12 : 0)
-                               : ns[(i + 1) % ns.length] + (i === 2 ? 12 : 0);
-        box.triggerAttackRelease(N(note), 0.3, t + s, 0.13 + p * 0.05);
+        const s = slots[(i + off) % slots.length];
+        const m = i < motif.length ? motif[i] : motif[motif.length - 1] + 12;  /* tail answers on top */
+        box.triggerAttackRelease(N(m), 0.3, t + s, 0.11 + p * 0.05);
       }
     }, 4).start(0);
     Tone.Transport.start();
@@ -57,21 +102,23 @@ const Sound = (() => {
   }
 
   /* ---- the table feeds the box ---- */
-  function setBed(vals) {          /* after every roll: new material + say it out loud */
-    bedNotes = vals.map(v => PENT[v - 1]);
+  function setBed(vals, key) {     /* after every roll: the table's new harmony */
+    chord = harmony(vals, key);
+    motif = boardMotif();
     if (!on) return;
     const t = Tone.now() + 0.02;
-    const ns = [...bedNotes].sort((a, b) => a - b);
-    box.triggerAttackRelease(N(ns[0] - 12), 0.3, t, 0.2);
-    box.triggerAttackRelease(N(ns[Math.min(2, ns.length - 1)]), 0.25, t + 0.09, 0.18);
-    box.triggerAttackRelease(N(ns[ns.length - 1] + 12), 0.3, t + 0.18, 0.16);
+    box.triggerAttackRelease(N(chord.root - 12), 0.4, t, 0.2);   /* say the new chord out loud */
+    chord.tones.forEach((m, i) => box.triggerAttackRelease(N(m), 0.3, t + 0.09 + i * 0.07, 0.15));
   }
-  function setLocks(vals) { locks = vals.map(v => PENT[v - 1]); }   /* selected dice join the bed */
+  function setLocks(vals) {        /* two or more selected dice rewrite the figure */
+    const lk = vals.map(v => PENT[v - 1]).sort((a, b) => a - b);
+    if (lk.length >= 2) motif = lk.slice(0, 3);
+  }
   function setMood(p, u)   { mood = { p: Math.max(0, Math.min(1, p)), u: Math.max(0, Math.min(1, u)) }; }
   function touch()         { if (on) lastTouch = Tone.now(); }      /* any action wakes the box */
 
   /* ---- picking ---- */
-  function pick(v) {           /* selected: its note rings once, then lives in the bed */
+  function pick(v) {           /* selected: its note rings once, then lives in the figure */
     if (!on) return;
     box.triggerAttackRelease(N(PENT[v - 1]), 0.15, Tone.now(), 0.3);
   }
@@ -88,22 +135,30 @@ const Sound = (() => {
   function invalid() { if (on) tick(500, 0.12, undefined, 0.08); }
 
   /* ---- scoring ---- */
-  function handNotes(vals) {   /* played dice, low to high, quick run */
+  function handNotes(vals, key) {  /* played dice, low to high, ending on the hand's own root */
     if (!on) return;
+    const h = harmony(vals, key);
+    land = h.root;
     const t0 = Tone.now() + 0.03;
     [...vals].sort((a, b) => a - b).forEach((v, i) =>
       box.triggerAttackRelease(N(PENT[v - 1]), 0.2, t0 + i * 0.07, 0.34));
+    box.triggerAttackRelease(N(h.root + 12), 0.25, t0 + vals.length * 0.07, 0.3);
   }
   function countTick(i) {      /* score climbing: the run rises with the number */
     if (!on) return;
     const m = PENT[i % 6] + 12 * Math.min(2, Math.floor(i / 6));
     box.triggerAttackRelease(N(m), 0.1, Tone.now(), 0.2);
   }
-  function multHit() {         /* the multiplier lands: two bright notes + thump */
+  function multHit() {         /* the multiplier lands on the hand's root and its fifth */
     if (!on) return; const t = Tone.now();
-    box.triggerAttackRelease(N(86), 0.2, t, 0.32);
-    box.triggerAttackRelease(N(91), 0.35, t + 0.06, 0.3);
+    box.triggerAttackRelease(N(land + 12), 0.2, t, 0.32);
+    box.triggerAttackRelease(N(Math.min(deg(land, 4) + 12, 96)), 0.35, t + 0.06, 0.3);
     mem.triggerAttackRelease('G2', 0.06, t, 0.7);
+  }
+  function respond() {         /* after a hand banks, the bed answers with the figure, up an octave */
+    if (!on) return;
+    const t0 = Tone.now() + 0.3;
+    motif.forEach((m, i) => box.triggerAttackRelease(N(m + 12), 0.2, t0 + i * 0.09, 0.16));
   }
 
   /* ---- endings ---- */
@@ -137,6 +192,6 @@ const Sound = (() => {
 
   const mute = m => { if (on) master.mute = m; };
   return { init, setBed, setLocks, setMood, touch, pick, unpick, confirm, invalid,
-           handNotes, countTick, multHit, winChord, loseFall,
+           handNotes, countTick, multHit, respond, winChord, loseFall,
            rollRattle, tick, thump, mute };
 })();

@@ -229,7 +229,7 @@ function playHand(c) {
   const selIdx = [];
   S.d.forEach((v, i) => { if (v !== null) selIdx.push(i); });
 
-  try { Sound.handNotes(vals); } catch (e) { /* audio must never block the game */ }
+  try { Sound.handNotes(vals, c.key); } catch (e) { /* audio must never block the game */ }
   stamp(t.name.toUpperCase(), t.mult >= 4 ? 'gold' : '');
   selIdx.forEach(i => dice[i].d.classList.add('fired'));
 
@@ -263,6 +263,7 @@ function countScore(from, to) {
 }
 
 function afterPlay() {
+  try { Sound.respond(); } catch (e) {}   /* the bed answers the hand that just banked */
   S.hands--; renderMeta();
   dice.forEach(({ d }) => d.classList.remove('fired'));
   els.pName.textContent = '—'; els.pMath.textContent = '';
