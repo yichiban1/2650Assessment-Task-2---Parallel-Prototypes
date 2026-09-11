@@ -328,9 +328,13 @@ els.table.addEventListener('pointerdown', e => {
 });
 window.addEventListener('pointerup', releaseShake);
 window.addEventListener('pointercancel', releaseShake);
+/* keys 1-6 toggle dice like piano keys — selection without leaving the keyboard */
+const KEY_DIE = { Digit1: 0, Digit2: 1, Digit3: 2, Digit4: 3, Digit5: 4, Digit6: 5,
+                  Numpad1: 0, Numpad2: 1, Numpad3: 2, Numpad4: 3, Numpad5: 4, Numpad6: 5 };
 window.addEventListener('keydown', e => {
   if (e.code === 'Space' && !e.repeat) { e.preventDefault(); startShake(); }
   if ((e.code === 'Enter' || e.code === 'NumpadEnter') && !els.playBtn.disabled) els.playBtn.click();
+  if (KEY_DIE[e.code] !== undefined && !e.repeat) toggleSelect(KEY_DIE[e.code]);
 });
 window.addEventListener('keyup', e => { if (e.code === 'Space') releaseShake(); });
 
