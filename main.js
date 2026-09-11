@@ -11,7 +11,7 @@ const els = {
   hands: $('handsEl'), rerolls: $('rerollsEl'), round: $('roundEl'),
   pName: $('pName'), pMath: $('pMath'), playBtn: $('playBtn'), prog: $('progFill'),
   comboList: $('comboList'), end: $('end'), endName: $('endName'),
-  endStats: $('endStats'),
+  endStats: $('endStats'), help: $('help'),
 };
 
 /* ---- tunables — play with these ---- */
@@ -335,8 +335,13 @@ window.addEventListener('keydown', e => {
   if (e.code === 'Space' && !e.repeat) { e.preventDefault(); startShake(); }
   if ((e.code === 'Enter' || e.code === 'NumpadEnter') && !els.playBtn.disabled) els.playBtn.click();
   if (KEY_DIE[e.code] !== undefined && !e.repeat) toggleSelect(KEY_DIE[e.code]);
+  if (e.key === '?' && !e.repeat) els.help.classList.toggle('show');
+  if (e.code === 'Escape') els.help.classList.remove('show');
 });
 window.addEventListener('keyup', e => { if (e.code === 'Space') releaseShake(); });
+
+$('helpBtn').addEventListener('click', () => els.help.classList.toggle('show'));
+$('helpClose').addEventListener('click', () => els.help.classList.remove('show'));
 
 $('muteBtn').addEventListener('click', () => {
   const m = $('muteBtn').textContent === 'sound on';
