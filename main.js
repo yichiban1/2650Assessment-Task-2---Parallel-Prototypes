@@ -15,22 +15,22 @@ const els = {
 };
 
 /* ---- tunables — play with these ---- */
-const ROUNDS = [500, 1300, 2600];   /* target score per round */
+const ROUNDS = [400, 1100, 2200];   /* target score per round — each round must out-gamble the last */
 const HANDS = 4;                    /* plays per round */
 const SHAKES = 3;                   /* rerolls per round */
 const PIP_CHIPS = 5;                /* chips per pip */
 /* hand values: mult does the escalating — pairs are routine money,
    the big multipliers on rare hands are what worth shaking for */
 const TYPES = {
-  five:      { name: 'five of a kind', base: 100, mult: 8, desc: 'five dice, one face — the jackpot rattle' },
-  threeStr:  { name: 'big straight',   base: 60,  mult: 5, desc: 'five steps in a row: 1-2-3-4-5 or 2-3-4-5-6' },
-  four:      { name: 'four',           base: 50,  mult: 6, desc: 'four of a face, one stray' },
-  full:      { name: 'full house',     base: 40,  mult: 4, desc: 'three of one face, two of another' },
-  str:       { name: 'small straight', base: 30,  mult: 4, desc: 'four steps in a row' },
-  three:     { name: 'three',          base: 30,  mult: 3, desc: 'three of a face' },
-  twoPair:   { name: 'two pair',       base: 20,  mult: 2, desc: 'two pairs — one step from a full house' },
-  pair:      { name: 'pair',           base: 15,  mult: 2, desc: 'two of a face — the everyday hand' },
-  high:      { name: 'high die',       base: 5,   mult: 1, desc: 'nothing pairs; the top pip speaks alone' },
+  five:      { name: 'five of a kind', base: 100, mult: 10, desc: 'five dice, one face — the jackpot rattle' },
+  threeStr:  { name: 'big straight',   base: 60,  mult: 6,  desc: 'five steps in a row: 1-2-3-4-5 or 2-3-4-5-6' },
+  four:      { name: 'four',           base: 50,  mult: 7,  desc: 'four of a face, one stray' },
+  full:      { name: 'full house',     base: 40,  mult: 5,  desc: 'three of one face, two of another' },
+  str:       { name: 'small straight', base: 30,  mult: 4,  desc: 'four steps in a row' },
+  three:     { name: 'three',          base: 30,  mult: 3,  desc: 'three of a face' },
+  twoPair:   { name: 'two pair',       base: 20,  mult: 2,  desc: 'two pairs — one step from a full house' },
+  pair:      { name: 'pair',           base: 10,  mult: 2,  desc: 'two of a face — the everyday hand' },
+  high:      { name: 'high die',       base: 5,   mult: 1,  desc: 'nothing pairs; the top pip speaks alone' },
 };
 const TYPE_ORDER = ['five', 'four', 'threeStr', 'full', 'str', 'three', 'twoPair', 'pair', 'high'];
 /* ----------------------------------- */
