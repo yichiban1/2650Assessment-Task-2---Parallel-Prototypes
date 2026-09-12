@@ -22,15 +22,15 @@ const PIP_CHIPS = 5;                /* chips per pip */
 /* hand values: mult does the escalating — pairs are routine money,
    the big multipliers on rare hands are what worth shaking for */
 const TYPES = {
-  five:      { name: 'five of a kind', base: 100, mult: 8 },
-  threeStr:  { name: 'big straight',   base: 60,  mult: 5 },
-  four:      { name: 'four',           base: 50,  mult: 6 },
-  full:      { name: 'full house',     base: 40,  mult: 4 },
-  str:       { name: 'small straight', base: 30,  mult: 4 },
-  three:     { name: 'three',          base: 30,  mult: 3 },
-  twoPair:   { name: 'two pair',       base: 20,  mult: 2 },
-  pair:      { name: 'pair',           base: 15,  mult: 2 },
-  high:      { name: 'high die',       base: 5,   mult: 1 },
+  five:      { name: 'five of a kind', base: 100, mult: 8, desc: 'five dice, one face — the jackpot rattle' },
+  threeStr:  { name: 'big straight',   base: 60,  mult: 5, desc: 'five steps in a row: 1-2-3-4-5 or 2-3-4-5-6' },
+  four:      { name: 'four',           base: 50,  mult: 6, desc: 'four of a face, one stray' },
+  full:      { name: 'full house',     base: 40,  mult: 4, desc: 'three of one face, two of another' },
+  str:       { name: 'small straight', base: 30,  mult: 4, desc: 'four steps in a row' },
+  three:     { name: 'three',          base: 30,  mult: 3, desc: 'three of a face' },
+  twoPair:   { name: 'two pair',       base: 20,  mult: 2, desc: 'two pairs — one step from a full house' },
+  pair:      { name: 'pair',           base: 15,  mult: 2, desc: 'two of a face — the everyday hand' },
+  high:      { name: 'high die',       base: 5,   mult: 1, desc: 'nothing pairs; the top pip speaks alone' },
 };
 const TYPE_ORDER = ['five', 'four', 'threeStr', 'full', 'str', 'three', 'twoPair', 'pair', 'high'];
 /* ----------------------------------- */
@@ -55,7 +55,8 @@ for (let i = 0; i < 6; i++) {
 TYPE_ORDER.forEach(k => {
   const t = TYPES[k], row = document.createElement('div');
   row.className = 'crow'; row.dataset.t = k;
-  row.innerHTML = '<span class="cname">' + t.name + '</span><span class="cmath">' + t.base + ' × ' + t.mult + '</span>';
+  row.innerHTML = '<div class="crow-top"><span class="cname">' + t.name + '</span><span class="cmath">' + t.base + ' × ' + t.mult + '</span></div>' +
+                  '<span class="cdesc">' + t.desc + '</span>';
   els.comboList.appendChild(row);
 });
 

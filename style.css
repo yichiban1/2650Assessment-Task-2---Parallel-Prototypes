@@ -150,12 +150,16 @@ body::after {  /* lamp vignette */
 .combos { width: 218px; flex: none; border-left: 1px solid var(--edge); padding-left: 22px; padding-top: 6px; }
 .combos .cap { font-size: 10px; letter-spacing: .3em; text-transform: uppercase; color: var(--ink-dim); margin-bottom: 10px; }
 .crow {
-  display: flex; justify-content: space-between; align-items: baseline;
-  padding: 5px 8px; border-left: 2px solid transparent;
+  padding: 6px 8px; border-left: 2px solid transparent;
   transition: border-color .2s, background .2s, color .2s;
 }
+.crow-top { display: flex; justify-content: space-between; align-items: baseline; }
 .crow .cname { font-size: 13px; font-style: italic; letter-spacing: .04em; color: var(--ink-dim); }
 .crow .cmath { font-size: 12px; letter-spacing: .06em; color: var(--ink-dim); }
+/* the glossary whispers: a hand explains itself only when you look at it or play it */
+.crow .cdesc { display: none; margin-top: 1px; font-size: 10.5px; letter-spacing: .03em; color: color-mix(in srgb, var(--ink-dim) 75%, transparent); }
+.crow:hover .cdesc { display: block; }
+.crow.on .cdesc { display: block; color: var(--ink-dim); }
 .crow.on { border-left-color: var(--red); background: color-mix(in srgb, var(--red) 10%, transparent); }
 .crow.on .cname { color: var(--ink); font-size: 14px; }
 .crow.on .cmath { color: var(--gold); }
