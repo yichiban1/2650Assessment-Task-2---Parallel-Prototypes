@@ -162,9 +162,6 @@ body::after {  /* lamp vignette */
 .crow.on { border-left-color: var(--red); background: color-mix(in srgb, var(--red) 10%, transparent); }
 .crow.on .cname { color: var(--ink); font-size: 14px; }
 .crow.on .cmath { color: var(--gold); }
-/* formable now: faint tick, a step above idle but far below selected */
-.crow.can { border-left-color: color-mix(in srgb, var(--gold) 45%, transparent); }
-.crow.can .cname { color: color-mix(in srgb, var(--ink) 62%, var(--ink-dim)); }
 
 /* ---------- stamps ---------- */
 .stamp-layer { position: absolute; inset: 0; pointer-events: none; z-index: 3; }

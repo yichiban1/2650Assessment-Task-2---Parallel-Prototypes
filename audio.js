@@ -196,5 +196,5 @@ const Sound = (() => {
   const mute = m => { if (on) master.mute = m; };
   return { init, setBed, setLocks, setMood, touch, pick, unpick, confirm, invalid,
            handNotes, countTick, multHit, respond, winChord, loseFall,
-           rollRattle, tick, thump, mute };
+           rollRattle, tick, mute };
 })();
