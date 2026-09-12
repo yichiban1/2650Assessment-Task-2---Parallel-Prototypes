@@ -11,7 +11,7 @@ const els = {
   hands: $('handsEl'), rerolls: $('rerollsEl'), round: $('roundEl'),
   pName: $('pName'), pMath: $('pMath'), playBtn: $('playBtn'), prog: $('progFill'),
   comboList: $('comboList'), end: $('end'), endName: $('endName'),
-  endStats: $('endStats'), help: $('help'),
+  endStats: $('endStats'), help: $('help'), endBest: $('endBest'),
 };
 
 /* ---- tunables — play with these ---- */
@@ -214,6 +214,7 @@ function playHand(c) {
   const vals = selected();
   const chips = t.base + c.sum * PIP_CHIPS;
   const gain = chips * t.mult;
+  if (!S.best || gain > S.best.gain) S.best = { name: t.name, gain };   /* the run's best hand, for the end card */
   const selIdx = [];
   S.d.forEach((v, i) => { if (v !== null) selIdx.push(i); });
 
@@ -278,8 +279,9 @@ function newGame() {
   timers.forEach(clearTimeout); timers = [];
   S = { phase: 'ROLL', round: 0, target: ROUNDS[0], score: 0, hands: HANDS,
         shakes: SHAKES, d: [null, null, null, null, null, null],
-        vals: [1, 2, 3, 4, 5, 6], rolling: false };
+        vals: [1, 2, 3, 4, 5, 6], rolling: false, best: null };
   els.end.classList.remove('show');
+  els.endBest.textContent = '';
   els.stamp.innerHTML = '';
   dice.forEach(({ d }) => { d.classList.remove('sel', 'fired'); });
   renderMeta(); renderPreview();
@@ -306,6 +308,7 @@ function gameOver(won) {
   try { if (won) Sound.winChord(); else Sound.loseFall(); } catch (e) {}
   els.endName.textContent = won ? '\u201Cclean sweep\u201D' : '\u201Cshort stack\u201D';
   els.endStats.textContent = 'score ' + S.score + ' / ' + S.target + ' · round ' + (S.round + 1) + ' of ' + ROUNDS.length;
+  els.endBest.innerHTML = 'best hand — <span>' + S.best.name + ' · ' + S.best.gain + '</span>';
   later(() => els.end.classList.add('show'), won ? 900 : 1200);
 }
 

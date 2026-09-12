@@ -185,6 +185,8 @@ body::after {  /* lamp vignette */
 .end.show { opacity: 1; pointer-events: auto; }
 .end-card { background: var(--felt-lo); border: 1px solid var(--gold); outline: 1px solid var(--gold); outline-offset: 5px; padding: 36px 52px; text-align: center; }
 .end-name { font-size: 44px; font-style: italic; letter-spacing: .04em; }
+.end-best { margin: 14px 0 0; font-size: 12px; letter-spacing: .18em; text-transform: uppercase; color: var(--ink-dim); }
+.end-best span { color: var(--gold); }
 .end-stats { margin: 12px 0 24px; font-size: 13px; letter-spacing: .18em; text-transform: uppercase; color: var(--ink-dim); }
 .end-btns { display: flex; gap: 12px; justify-content: center; }
 
