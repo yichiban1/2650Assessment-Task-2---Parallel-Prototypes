@@ -334,13 +334,18 @@ window.addEventListener('keyup', e => { if (e.code === 'Space') releaseShake(); 
 $('helpBtn').addEventListener('click', () => els.help.classList.toggle('show'));
 $('helpClose').addEventListener('click', () => els.help.classList.remove('show'));
 
-$('muteBtn').addEventListener('click', () => {
-  const m = $('muteBtn').textContent === 'sound on';
+/* the sound toggle remembers itself across visits */
+const muteBtn = $('muteBtn');
+muteBtn.textContent = localStorage.getItem('rolling-sound') === 'off' ? 'sound off' : 'sound on';
+muteBtn.addEventListener('click', () => {
+  const m = muteBtn.textContent === 'sound on';
   Sound.mute(m);
-  $('muteBtn').textContent = m ? 'sound off' : 'sound on';
+  localStorage.setItem('rolling-sound', m ? 'off' : 'on');
+  muteBtn.textContent = m ? 'sound off' : 'sound on';
 });
-/* audio needs a user gesture — the first click/keypress wakes it up */
-const wake = () => { Sound.init().catch(() => {}); };
+/* audio needs a user gesture — the first click/keypress wakes it up,
+   and the remembered mute lands as soon as the engine exists */
+const wake = () => { Sound.init().then(() => Sound.mute(muteBtn.textContent === 'sound off')).catch(() => {}); };
 window.addEventListener('pointerdown', wake, { once: true });
 window.addEventListener('keydown', wake, { once: true });
 $('againBtn').addEventListener('click', newGame);
