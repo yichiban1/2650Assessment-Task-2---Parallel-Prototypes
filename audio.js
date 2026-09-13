@@ -1,15 +1,23 @@
-/* audio.js — Rolling sound engine.
-   Die face 1..6 → G major pentatonic (G4 A4 B4 D5 E5 G5), so any roll sounds fine.
-   One instrument only: a music box (soft sine plucks) — bass, chords and melody
-   are just registers of that one voice.
-   The bed is generative, not pre-made bars: every roll re-keys it. The hand lying
-   on the table picks the chord (a pair is a bare fifth, a triple a triad, a full
-   house a thick stack — rarer hand, bigger chord), the dice you lock in rewrite
-   the melody figure, and after a hand banks the bed answers with that figure an
-   octave up. It sleeps when the player is idle, busies itself as the target nears
-   and tightens as hands run out. */
+/**
+ * Rolling — Sound Engine.
+ * A music box that plays the game: six dice become its pitches, the hand
+ * lying on the table becomes its chord, the dice you lock in become its
+ * tune. Nothing loops; the box only ever plays what the game asks for.
+ */
 const Sound = (() => {
   let on = false, box, master, rev, mem, hatGain, bp;
+
+  // ========================================
+  // Scale & Chord Mapping
+  // ========================================
+  /*
+   * Die faces 1..6 are notes of G major pentatonic, so any roll is
+   * already consonant. Chords are built as scale degrees from a root —
+   * a pair is a bare fifth, a triple a triad, a full house a thick
+   * stack, straights run the scale — and the root follows the most
+   * repeated die, so a pair of 4s literally re-keys the bed onto D.
+   * Rarer hand, bigger chord: the payoff table has a harmonic shadow.
+   */
   const PENT = [67, 69, 71, 74, 76, 79];           /* G4 A4 B4 D5 E5 G5 */
   const N = m => Tone.Frequency(m, 'midi').toNote();
   /* the pentatonic laid out over two octaves — chords are built as scale degrees
@@ -61,6 +69,16 @@ const Sound = (() => {
                 : [t[0], t[Math.floor(t.length / 2)], t[t.length - 1]];
   }
 
+  // ========================================
+  // One Instrument
+  // ========================================
+  /*
+   * Everything is played on a single music box: soft sine plucks through
+   * a short reverb. Bass, chords, melody and punctuation are just
+   * registers of that one voice. One timbre keeps the whole game sounding
+   * like a single object speaking, rather than an orchestra of unrelated
+   * sound effects competing for attention.
+   */
   async function init() {
     if (on) return;
     await Tone.start();
@@ -79,10 +97,18 @@ const Sound = (() => {
     const noise = new Tone.Noise('pink').start();
     hatGain = new Tone.Gain(0); bp = new Tone.Filter(1600, 'bandpass');
     noise.connect(hatGain); hatGain.connect(bp); bp.connect(master);
-    /* the bed: reads the game fresh every bar — never the same twice.
-       A low root breathes even when idle; the figure lands on slots that
-       reshuffle with every roll; the closer to the target (p) and the fewer
-       hands left (u), the more of the figure gets played. */
+
+    // ========================================
+    // The Bed
+    // ========================================
+    /*
+     * Generative, never a loop of pre-made bars. Every bar the bed reads
+     * the game fresh: a low root breathes even when the player is idle,
+     * the figure lands on slots that reshuffle with every roll, and the
+     * closer the target (p) with the fewer hands left (u), the more of
+     * the figure gets played. Sparse input is fine — the box waits, it
+     * does not die.
+     */
     Tone.Transport.bpm.value = 76;
     new Tone.Loop(t => {
       const idle = Tone.now() - lastTouch > 12;
@@ -101,7 +127,15 @@ const Sound = (() => {
     on = true;
   }
 
-  /* ---- the table feeds the box ---- */
+  // ========================================
+  // Feeding the Box
+  // ========================================
+  /*
+   * The game calls in after every event: a roll announces its new chord
+   * out loud, two or more locked dice rewrite the figure, and any action
+   * wakes the box from its idle breathing. The game stays the composer —
+   * the box never plays anything the table did not ask for.
+   */
   function setBed(vals, key) {     /* after every roll: the table's new harmony */
     chord = harmony(vals, key);
     motif = boardMotif();
@@ -117,7 +151,15 @@ const Sound = (() => {
   function setMood(p, u)   { mood = { p: Math.max(0, Math.min(1, p)), u: Math.max(0, Math.min(1, u)) }; }
   function touch()         { if (on) lastTouch = Tone.now(); }      /* any action wakes the box */
 
-  /* ---- picking ---- */
+  // ========================================
+  // Picking Is Playing
+  // ========================================
+  /*
+   * Selecting a die strums the whole hand as a quick ascending riff —
+   * the player hears what they just did, like strumming a chord.
+   * Releasing a die drops its note an octave down, and the moment a
+   * selection becomes a valid hand, a small fifth flicks upward.
+   */
   function pick(v, vals) {     /* selected: the whole selection rolls out as a quick ascending riff —
                                   the player hears what they just played, like strumming a chord */
     if (!on) return;
@@ -129,7 +171,6 @@ const Sound = (() => {
     if (!on) return;
     box.triggerAttackRelease(N(PENT[v - 1] - 12), 0.1, Tone.now(), 0.12);
   }
-  /* a valid hand just formed: brief fifth flick, up */
   function confirm() {
     if (!on) return; const t = Tone.now();
     box.triggerAttackRelease(N(74), 0.2, t, 0.16);
@@ -137,7 +178,16 @@ const Sound = (() => {
   }
   function invalid() { if (on) tick(500, 0.12, undefined, 0.08); }
 
-  /* ---- scoring ---- */
+  // ========================================
+  // The Payout
+  // ========================================
+  /*
+   * The played dice run low to high and end on the hand's own root — a
+   * resolution to wherever the dice pointed. The score's climb ticks
+   * upward through the scale, the multiplier lands on root and fifth
+   * with a thump, and afterwards the bed answers with the figure an
+   * octave up: a small call-and-response between gambler and instrument.
+   */
   function handNotes(vals, key) {  /* played dice, low to high, ending on the hand's own root */
     if (!on) return;
     const h = harmony(vals, key);
@@ -164,7 +214,11 @@ const Sound = (() => {
     motif.forEach((m, i) => box.triggerAttackRelease(N(m + 12), 0.2, t0 + i * 0.09, 0.16));
   }
 
-  /* ---- endings ---- */
+  // ========================================
+  // Endings
+  // ========================================
+  /* A win is a rising run, like a payout; a loss is a short fall —
+     collapse, but never sludge. Both stay in the box's one voice. */
   function winChord() {        /* rising run, like a payout */
     if (!on) return; const t = Tone.now() + 0.04;
     [67, 71, 74, 79, 83, 86].forEach((m, i) => box.triggerAttackRelease(N(m), 0.25, t + i * 0.07, 0.26));
@@ -175,7 +229,16 @@ const Sound = (() => {
     [79, 76, 71, 67].forEach((m, i) => box.triggerAttackRelease(N(m), 0.25, t + i * 0.12, 0.28));
   }
 
-  /* ---- physical: shake & land ---- */
+  // ========================================
+  // The Bones
+  // ========================================
+  /*
+   * Underneath the music, the dice must feel like objects: filtered
+   * noise ticks follow the shake's three accelerating tiers and land on
+   * a thump when the dice settle. Physicality first — these sounds are
+   * what make the gamble feel held in the hand rather than read off a
+   * screen.
+   */
   function tick(freq = 2200, vel = 0.4, t, dur = 0.05) {
     if (!on) return;
     t = t ?? Tone.now();
