@@ -1,8 +1,8 @@
-/* main.js — Rolling: a small dice game.
-   Roll six dice, select some into a poker hand, play it for chips × mult,
-   and clear the score target before the hands run out. Three rounds, targets rise.
-   The gamble: shaking only rerolls the dice you did NOT select, so every turn is
-   "lock the dice you like, risk the rest". */
+/**
+ * Rolling — a dice poker in the spirit of Balatro.
+ * Roll six dice, lock some into a poker hand, and gamble the rest:
+ * every hand banks chips × mult toward a target that rises each round.
+ */
 (() => {
 const $ = id => document.getElementById(id);
 const els = {
@@ -14,13 +14,21 @@ const els = {
   endStats: $('endStats'), help: $('help'), endBest: $('endBest'),
 };
 
-/* ---- tunables — play with these ---- */
+// ========================================
+// The Economy
+// ========================================
+/*
+ * The whole game runs on a small budget: four hands and three shakes per
+ * round. Every hand is therefore a question — bank the safe pair now, or
+ * spend a shake fishing for the triples and straights that actually pay?
+ * The targets are tuned so that settling for pairs loses by a breath: the
+ * gamble is not optional, it is the price of admission. Pairs are grind
+ * money; the big multipliers on rare hands are what the shaking is for.
+ */
 const ROUNDS = [400, 1100, 2200];   /* target score per round — each round must out-gamble the last */
 const HANDS = 4;                    /* plays per round */
 const SHAKES = 3;                   /* rerolls per round */
 const PIP_CHIPS = 5;                /* chips per pip */
-/* hand values: mult does the escalating — pairs are routine money,
-   the big multipliers on rare hands are what worth shaking for */
 const TYPES = {
   five:      { name: 'five of a kind', base: 100, mult: 10, desc: 'five dice, one face — the jackpot rattle' },
   threeStr:  { name: 'big straight',   base: 60,  mult: 6,  desc: 'five steps in a row: 1-2-3-4-5 or 2-3-4-5-6' },
@@ -33,13 +41,20 @@ const TYPES = {
   high:      { name: 'high die',       base: 5,   mult: 1,  desc: 'nothing pairs; the top pip speaks alone' },
 };
 const TYPE_ORDER = ['five', 'four', 'threeStr', 'full', 'str', 'three', 'twoPair', 'pair', 'high'];
-/* ----------------------------------- */
 
+// ========================================
+// The Table
+// ========================================
+/*
+ * Six dice, built by hand:
+ * each die is a 3×3 pip grid over a rounded face with a soft shadow.
+ * A face is set with data-v, and the CSS lights the right pips for that
+ * value. Nothing here knows about scoring — the dice are honest physical
+ * objects, and the game simply reads them when it needs to.
+ */
 const rnd = () => 1 + Math.random() * 6 | 0;   /* 1..6 — |0 truncates, so the +1 has to come first */
 let S = null, hold = null, timers = [], counting = false;
 const later = (fn, ms) => timers.push(setTimeout(fn, ms));   /* pending timeouts, cleared on restart */
-
-/* ---------- dice ---------- */
 const dice = [];
 for (let i = 0; i < 6; i++) {
   const w = document.createElement('div'); w.className = 'die-wrap';
@@ -50,8 +65,12 @@ for (let i = 0; i < 6; i++) {
   d.addEventListener('click', () => toggleSelect(i));
   dice.push({ w, d });
 }
-
-/* ---------- combo table ---------- */
+/*
+ * The glossary:
+ * one row per hand, always visible but quiet — a reminder of what exists,
+ * not a hint about what you have. Descriptions only surface when a row is
+ * hovered or played; reading the dice remains the player's job.
+ */
 TYPE_ORDER.forEach(k => {
   const t = TYPES[k], row = document.createElement('div');
   row.className = 'crow'; row.dataset.t = k;
@@ -60,7 +79,9 @@ TYPE_ORDER.forEach(k => {
   els.comboList.appendChild(row);
 });
 
-/* ---------- rendering ---------- */
+// ========================================
+// Rendering
+// ========================================
 function renderMeta() {
   els.score.textContent = S.score;
   els.target.textContent = '/ ' + S.target;
@@ -69,7 +90,7 @@ function renderMeta() {
   els.round.textContent = (S.round + 1) + '/' + ROUNDS.length;
   els.playBtn.disabled = !currentCombo();
   updateProgress();
-  /* the box tracks the game: closer to target = busier, fewer hands = tighter */
+  /* the music box tracks the game: closer to target = busier, fewer hands = tighter */
   try { Sound.setMood(Math.min(1, S.score / S.target), 1 - S.hands / HANDS); } catch (e) {}
 }
 function updateProgress() {
@@ -97,7 +118,16 @@ function stamp(text, cls = '') {
   later(() => s.remove(), 1100);
 }
 
-/* ---------- combo detection ---------- */
+// ========================================
+// Hand Detection
+// ========================================
+/*
+ * A selection always scores as the best hand it makes:
+ * the checks run rarest-first, so a full house is never mistaken for its
+ * pair. Straights look for consecutive unique faces inside whatever was
+ * locked. Loose dice return null — they are not a hand, and the game
+ * says so plainly instead of quietly paying out nothing.
+ */
 function detect(vals) {
   const n = vals.length;
   if (!n) return null;
@@ -113,7 +143,6 @@ function detect(vals) {
     }
     return false;
   };
-  /* rarer hands first — a selection always scores as the best type it makes */
   if (counts[0] === 5) return { key: 'five', sum: vals.reduce((a, b) => a + b) };
   if (counts[0] === 4) return { key: 'four', sum: vals.reduce((a, b) => a + b) };
   if (counts[0] === 3 && counts[1] >= 2) return { key: 'full', sum: vals.reduce((a, b) => a + b) };
@@ -127,7 +156,15 @@ function detect(vals) {
 const selected = () => dice.map((_, i) => S.d[i]).filter(v => v !== null);
 function currentCombo() { return detect(selected()); }
 
-/* ---------- selection: one short blip per click ---------- */
+// ========================================
+// Selection Is Performance
+// ========================================
+/*
+ * Locking a die strums every die you hold; two or more locks rewrite the
+ * music box's tune. The gamble has a sound — what you keep becomes the
+ * melody, what you shake becomes the next bar. Audio calls are wrapped
+ * and swallowed: a broken speaker must never be able to break the game.
+ */
 function toggleSelect(i) {
   if (!S || S.rolling || counting || S.phase !== 'PLAY') return;
   const wasValid = !!currentCombo();
@@ -148,7 +185,16 @@ function renderDice() {
   });
 }
 
-/* ---------- rolling ---------- */
+// ========================================
+// Rolling & The Shake
+// ========================================
+/*
+ * Holding space (or the table) rattles the loose dice in three
+ * accelerating tiers, then releases them into a tumbling roll. Only
+ * unselected dice reroll — that asymmetry is the whole gamble: lock what
+ * you like, risk the rest. Every roll re-keys the music box to whatever
+ * the new table looks like.
+ */
 function rollDice(which, done) {
   S.rolling = true;
   try { Sound.rollRattle(0.8); } catch (e) {}
@@ -167,12 +213,14 @@ function rollDice(which, done) {
   later(() => {
     idx.forEach(i => { dice[i].w.classList.remove('rolling'); dice[i].w.style.animationDelay = ''; });
     S.rolling = false;
-    try { Sound.setBed(S.vals); Sound.touch(); } catch (e) {}   /* the box learns the new dice */
+    try {
+      const bk = detect(S.vals);   /* the hand on the table picks the bed's chord */
+      Sound.setBed(S.vals, bk ? bk.key : 'loose');
+      Sound.touch();
+    } catch (e) {}
     if (done) done();
   }, 880);
 }
-
-/* ---------- shake: hold to reroll the loose dice ---------- */
 function startShake() {
   if (!S || S.rolling || counting || S.phase !== 'PLAY' || hold) return;
   if (S.shakes <= 0) { msg('no shakes left — play what you hold'); return; }
@@ -198,7 +246,16 @@ function releaseShake() {
   rollDice(loose, () => { renderDice(); renderPreview(); renderMeta(); msg('select dice — or shake again'); });
 }
 
-/* ---------- play a hand ---------- */
+// ========================================
+// The Payout, Staged
+// ========================================
+/*
+ * A hand reveals in two acts: first the chips count up note by note,
+ * then the multiplier lands and the score climbs. The staging matters —
+ * the number is only half the fun, the other half is watching it arrive.
+ * The run's best hand is kept aside for the end card, because a
+ * gambler's story is told in their biggest pot.
+ */
 els.playBtn.addEventListener('click', () => {
   if (!S || S.rolling || counting || S.phase !== 'PLAY') return;
   const c = currentCombo();
@@ -214,7 +271,7 @@ function playHand(c) {
   const vals = selected();
   const chips = t.base + c.sum * PIP_CHIPS;
   const gain = chips * t.mult;
-  if (!S.best || gain > S.best.gain) S.best = { name: t.name, gain };   /* the run's best hand, for the end card */
+  if (!S.best || gain > S.best.gain) S.best = { name: t.name, gain };
   const selIdx = [];
   S.d.forEach((v, i) => { if (v !== null) selIdx.push(i); });
 
@@ -222,7 +279,7 @@ function playHand(c) {
   stamp(t.name.toUpperCase(), t.mult >= 4 ? 'gold' : '');
   selIdx.forEach(i => dice[i].d.classList.add('fired'));
 
-  /* chips count up first… */
+  /* act one: the chips count up */
   let shown = 0;
   const chipIv = setInterval(() => {
     shown = Math.min(chips, shown + Math.max(1, Math.ceil(chips / 18)));
@@ -237,7 +294,6 @@ function playHand(c) {
     }
   }, 45);
 }
-
 function countScore(from, to) {
   let v = from;
   const iv = setInterval(() => {
@@ -250,7 +306,6 @@ function countScore(from, to) {
     }
   }, 40);
 }
-
 function afterPlay() {
   try { Sound.respond(); } catch (e) {}   /* the bed answers the hand that just banked */
   S.hands--; renderMeta();
@@ -261,7 +316,6 @@ function afterPlay() {
   if (S.hands <= 0) { gameOver(false); return; }
   nextHand();
 }
-
 function nextHand() {
   S.d = [null, null, null, null, null, null];
   S.phase = 'ROLL';
@@ -274,7 +328,15 @@ function nextHand() {
   });
 }
 
-/* ---------- rounds ---------- */
+// ========================================
+// Rounds & Endings
+// ========================================
+/*
+ * Three targets, each steeper than the last. Clear one and the table
+ * "warms up" for the next; run out of hands and the run ends on the end
+ * card — score, round, and the best hand of the run. Winning all three
+ * is a "clean sweep"; falling short is a "short stack".
+ */
 function newGame() {
   timers.forEach(clearTimeout); timers = [];
   S = { phase: 'ROLL', round: 0, target: ROUNDS[0], score: 0, hands: HANDS,
@@ -287,7 +349,6 @@ function newGame() {
   renderMeta(); renderPreview();
   nextHand();
 }
-
 function roundClear() {
   S.phase = 'BETWEEN';
   try { Sound.winChord(); } catch (e) {}
@@ -302,7 +363,6 @@ function roundClear() {
     nextHand();
   }, 1600);
 }
-
 function gameOver(won) {
   S.phase = 'OVER';
   try { if (won) Sound.winChord(); else Sound.loseFall(); } catch (e) {}
@@ -312,14 +372,22 @@ function gameOver(won) {
   later(() => els.end.classList.add('show'), won ? 900 : 1200);
 }
 
-/* ---------- wiring ---------- */
+// ========================================
+// Input
+// ========================================
+/*
+ * Mouse, touch and keyboard all speak the same language: 1-6 are the
+ * piano keys for locking dice, space is the shake, enter plays, ? opens
+ * the music box's own notes. The sound toggle remembers itself in
+ * localStorage, and the audio engine wakes on the first gesture, as
+ * browsers require — the remembered mute lands as soon as it exists.
+ */
 els.table.addEventListener('pointerdown', e => {
   if (e.target.closest('.hud, .die, button, .combos, .end, a')) return;
   startShake();
 });
 window.addEventListener('pointerup', releaseShake);
 window.addEventListener('pointercancel', releaseShake);
-/* keys 1-6 toggle dice like piano keys — selection without leaving the keyboard */
 const KEY_DIE = { Digit1: 0, Digit2: 1, Digit3: 2, Digit4: 3, Digit5: 4, Digit6: 5,
                   Numpad1: 0, Numpad2: 1, Numpad3: 2, Numpad4: 3, Numpad5: 4, Numpad6: 5 };
 window.addEventListener('keydown', e => {
@@ -334,7 +402,6 @@ window.addEventListener('keyup', e => { if (e.code === 'Space') releaseShake(); 
 $('helpBtn').addEventListener('click', () => els.help.classList.toggle('show'));
 $('helpClose').addEventListener('click', () => els.help.classList.remove('show'));
 
-/* the sound toggle remembers itself across visits */
 const muteBtn = $('muteBtn');
 muteBtn.textContent = localStorage.getItem('rolling-sound') === 'off' ? 'sound off' : 'sound on';
 muteBtn.addEventListener('click', () => {
@@ -343,8 +410,6 @@ muteBtn.addEventListener('click', () => {
   localStorage.setItem('rolling-sound', m ? 'off' : 'on');
   muteBtn.textContent = m ? 'sound off' : 'sound on';
 });
-/* audio needs a user gesture — the first click/keypress wakes it up,
-   and the remembered mute lands as soon as the engine exists */
 const wake = () => { Sound.init().then(() => Sound.mute(muteBtn.textContent === 'sound off')).catch(() => {}); };
 window.addEventListener('pointerdown', wake, { once: true });
 window.addEventListener('keydown', wake, { once: true });
