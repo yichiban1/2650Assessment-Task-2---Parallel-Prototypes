@@ -1,8 +1,10 @@
 /**
- * Rolling — Sound Engine.
- * A music box that plays the game: six dice become its pitches, the hand
- * lying on the table becomes its chord, the dice you lock in become its
- * tune. Nothing loops; the box only ever plays what the game asks for.
+ * Rolling — Sound Engine, "The Interpreter".
+ * The same game, re-voiced: a minor key and a slower gait turn the same
+ * gambles into a noir hand of cards. The box still plays the game — six
+ * dice become its pitches, the hand on the table becomes its chord, the
+ * dice you lock in become its tune — but every note has been read a
+ * shade darker.
  */
 const Sound = (() => {
   let on = false, box, master, rev, mem, hatGain, bp;
@@ -11,18 +13,18 @@ const Sound = (() => {
   // Scale & Chord Mapping
   // ========================================
   /*
-   * Die faces 1..6 are notes of G major pentatonic, so any roll is
-   * already consonant. Chords are built as scale degrees from a root —
-   * a pair is a bare fifth, a triple a triad, a full house a thick
-   * stack, straights run the scale — and the root follows the most
-   * repeated die, so a pair of 4s literally re-keys the bed onto D.
-   * Rarer hand, bigger chord: the payoff table has a harmonic shadow.
+   * Die faces 1..6 are notes of G MINOR pentatonic, so any roll is
+   * already consonant — and already moody. The whole interpretation
+   * hangs on this one array: the same game, read a shade darker.
+   * Chords are built as scale degrees from a root — a pair is a bare
+   * fifth, a triple a triad, a full house a thick stack — and the root
+   * follows the most repeated die, so a pair of 4s re-keys the bed onto D.
    */
-  const PENT = [67, 69, 71, 74, 76, 79];           /* G4 A4 B4 D5 E5 G5 */
+  const PENT = [67, 70, 72, 74, 77, 79];           /* G4 Bb4 C5 D5 F5 G5 */
   const N = m => Tone.Frequency(m, 'midi').toNote();
-  /* the pentatonic laid out over two octaves — chords are built as scale degrees
-     from a root, so every voicing stays inside the key no matter what it roots on */
-  const LAD = [55, 57, 59, 62, 64, 67, 69, 71, 74, 76, 79, 81, 83, 86, 88, 91];
+  /* the minor pentatonic laid out over two octaves — chords are built as scale
+     degrees from a root, so every voicing stays inside the key no matter what it roots on */
+  const LAD = [55, 58, 60, 62, 65, 67, 70, 72, 74, 77, 79, 82, 84, 86, 89, 91];
   const deg = (root, k) => LAD[Math.max(0, Math.min(LAD.length - 1, LAD.indexOf(root) + k))];
   /* chord shape per hand type, in degrees above the root: loose dice are a
      searching fourth, a pair an open fifth, triples a triad, straights run the
@@ -109,7 +111,7 @@ const Sound = (() => {
      * the figure gets played. Sparse input is fine — the box waits, it
      * does not die.
      */
-    Tone.Transport.bpm.value = 76;
+    Tone.Transport.bpm.value = 64;   /* the interpreter's gait: slower, heavier, meaner */
     new Tone.Loop(t => {
       const idle = Tone.now() - lastTouch > 12;
       const p = idle ? 0 : mood.p, u = idle ? 0 : mood.u;
@@ -174,7 +176,7 @@ const Sound = (() => {
   function confirm() {
     if (!on) return; const t = Tone.now();
     box.triggerAttackRelease(N(74), 0.2, t, 0.16);
-    box.triggerAttackRelease(N(81), 0.25, t + 0.06, 0.14);
+    box.triggerAttackRelease(N(79), 0.25, t + 0.06, 0.14);
   }
   function invalid() { if (on) tick(500, 0.12, undefined, 0.08); }
 
@@ -221,12 +223,12 @@ const Sound = (() => {
      collapse, but never sludge. Both stay in the box's one voice. */
   function winChord() {        /* rising run, like a payout */
     if (!on) return; const t = Tone.now() + 0.04;
-    [67, 71, 74, 79, 83, 86].forEach((m, i) => box.triggerAttackRelease(N(m), 0.25, t + i * 0.07, 0.26));
+    [67, 70, 74, 79, 82, 86].forEach((m, i) => box.triggerAttackRelease(N(m), 0.25, t + i * 0.07, 0.26));
     box.triggerAttackRelease(N(91), 0.6, t + 0.45, 0.22);
   }
   function loseFall() {        /* falling plucks — collapse, not sludge */
     if (!on) return; const t = Tone.now();
-    [79, 76, 71, 67].forEach((m, i) => box.triggerAttackRelease(N(m), 0.25, t + i * 0.12, 0.28));
+    [79, 77, 74, 67].forEach((m, i) => box.triggerAttackRelease(N(m), 0.25, t + i * 0.12, 0.28));
   }
 
   // ========================================

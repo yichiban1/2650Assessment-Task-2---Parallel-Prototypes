@@ -55,6 +55,12 @@ body::after {  /* lamp vignette */
 /* ---------- main layout ---------- */
 .main { flex: 1; min-height: 0; display: flex; gap: 30px; margin-top: 6px; }
 .stage { position: relative; flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+/* the variant tag — this build's one-line manifesto */
+.variant-tag {
+  position: fixed; left: 26px; bottom: 10px; z-index: 1;
+  font-size: 9px; letter-spacing: .2em; text-transform: uppercase;
+  color: color-mix(in srgb, var(--ink-dim) 60%, transparent);
+}
 
 /* ---------- dice ---------- */
 .dice { display: flex; gap: 26px; margin-bottom: 26px; flex-wrap: wrap; justify-content: center; }
