@@ -37,20 +37,47 @@ body::after {  /* lamp vignette */
 .ghost:hover { color: var(--ink); border-color: var(--ink); }
 .ghost.gold { color: var(--gold); border-color: var(--gold); }
 
-/* ---------- scorebar ---------- */
-.scorebar { display: flex; justify-content: space-between; align-items: flex-end; margin-top: 14px; }
-.scorebox { display: flex; flex-direction: column; align-items: flex-start; gap: 9px; }
+/* ---------- the peeks: everything hides until asked for ---------- */
+.peek { position: fixed; z-index: 5; }
+.peek-handle {
+  display: inline-block; padding: 4px 12px;
+  font-size: 10px; letter-spacing: .24em; text-transform: uppercase;
+  color: var(--ink-dim); border: 1px solid var(--edge);
+  background: color-mix(in srgb, var(--felt-lo) 70%, transparent);
+  transition: color .2s, border-color .2s;
+}
+.peek:hover .peek-handle { color: var(--ink); border-color: var(--ink); }
+.peek-stats { top: 56px; right: 26px; text-align: right; }
+.peek-stats .peek-body {
+  display: none; margin-top: 8px; padding: 16px 20px; text-align: left;
+  background: var(--felt-lo); border: 1px solid var(--edge); outline: 1px solid var(--edge); outline-offset: 3px;
+}
+.peek-stats:hover .peek-body { display: block; }
 .scoreline { display: flex; align-items: baseline; gap: 12px; }
-.scorebox .cap { font-size: 11px; letter-spacing: .28em; text-transform: uppercase; color: var(--ink-dim); }
-.scorebox .big { font-size: 54px; line-height: 1; letter-spacing: .02em; }
-.scorebox .target { font-size: 16px; font-style: italic; color: var(--gold); letter-spacing: .06em; }
-/* target progress — thin bar under the big score */
-.progress { width: 250px; height: 4px; background: var(--edge); overflow: hidden; }
+.scoreline .cap { font-size: 11px; letter-spacing: .28em; text-transform: uppercase; color: var(--ink-dim); }
+.scoreline .big { font-size: 44px; line-height: 1; letter-spacing: .02em; }
+.scoreline .target { font-size: 15px; font-style: italic; color: var(--gold); letter-spacing: .06em; }
+.peek-stats .progress { width: 170px; height: 4px; background: var(--edge); overflow: hidden; margin: 10px 0 14px; }
 .progress .fill { height: 100%; width: 0; background: var(--gold); transition: width .25s ease; }
-.metabox { display: flex; gap: 26px; }
+.metabox { display: flex; gap: 24px; }
 .meta { display: flex; flex-direction: column; align-items: center; gap: 2px; }
 .meta .cap { font-size: 10px; letter-spacing: .24em; text-transform: uppercase; color: var(--ink-dim); }
-.meta .mval { font-size: 24px; line-height: 1; }
+.meta .mval { font-size: 22px; line-height: 1; }
+.peek-hands { left: 0; right: 0; bottom: 0; display: flex; flex-direction: column; align-items: center; }
+.peek-hands .peek-handle { margin-bottom: 10px; }
+#comboList {
+  display: none; margin-bottom: 8px; padding: 10px 12px;
+  background: var(--felt-lo); border: 1px solid var(--edge);
+  flex-wrap: wrap; justify-content: center; gap: 2px;
+  max-width: 980px;
+}
+.peek-hands:hover #comboList { display: flex; }
+/* the variant tag — this build's one-line manifesto */
+.variant-tag {
+  position: fixed; right: 26px; bottom: 12px; z-index: 1;
+  font-size: 9px; letter-spacing: .2em; text-transform: uppercase;
+  color: color-mix(in srgb, var(--ink-dim) 60%, transparent);
+}
 
 /* ---------- main layout ---------- */
 .main { flex: 1; min-height: 0; display: flex; gap: 30px; margin-top: 6px; }
@@ -145,16 +172,15 @@ body::after {  /* lamp vignette */
 .playbtn:disabled { opacity: .35; cursor: default; }
 .controls .hint { font-size: 11px; letter-spacing: .14em; font-style: italic; color: var(--ink-dim); }
 
-/* ---------- combo table ---------- */
-.combos { width: 218px; flex: none; border-left: 1px solid var(--edge); padding-left: 22px; padding-top: 6px; }
-.combos .cap { font-size: 10px; letter-spacing: .3em; text-transform: uppercase; color: var(--ink-dim); margin-bottom: 10px; }
+/* ---------- combo table (peek cells) ---------- */
 .crow {
-  padding: 6px 8px; border-left: 2px solid transparent;
+  flex: 1 1 128px; min-width: 0;
+  padding: 5px 8px; border-left: 2px solid transparent;
   transition: border-color .2s, background .2s, color .2s;
 }
-.crow-top { display: flex; justify-content: space-between; align-items: baseline; }
-.crow .cname { font-size: 13px; font-style: italic; letter-spacing: .04em; color: var(--ink-dim); }
-.crow .cmath { font-size: 12px; letter-spacing: .06em; color: var(--ink-dim); }
+.crow-top { display: block; }
+.crow .cname { display: block; font-size: 12.5px; font-style: italic; letter-spacing: .04em; color: var(--ink-dim); }
+.crow .cmath { display: block; font-size: 11.5px; letter-spacing: .06em; color: var(--ink-dim); }
 /* the glossary whispers: a hand explains itself only when you look at it or play it */
 .crow .cdesc { display: none; margin-top: 1px; font-size: 10.5px; letter-spacing: .03em; color: color-mix(in srgb, var(--ink-dim) 75%, transparent); }
 .crow:hover .cdesc { display: block; }
@@ -208,6 +234,6 @@ body::after {  /* lamp vignette */
 @media (max-width: 860px) {
   .die { width: 56px; height: 56px; }
   .dice { gap: 16px; }
-  .combos { display: none; }
-  .scorebox .big { font-size: 40px; }
+  .crow .cdesc { display: none !important; }
+  .scoreline .big { font-size: 34px; }
 }
