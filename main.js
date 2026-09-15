@@ -90,8 +90,6 @@ function renderMeta() {
   els.round.textContent = (S.round + 1) + '/' + ROUNDS.length;
   els.playBtn.disabled = !currentCombo();
   updateProgress();
-  /* the music box tracks the game: closer to target = busier, fewer hands = tighter */
-  try { Sound.setMood(Math.min(1, S.score / S.target), 1 - S.hands / HANDS); } catch (e) {}
 }
 function updateProgress() {
   els.prog.style.width = Math.min(100, S.score / S.target * 100) + '%';
@@ -173,7 +171,6 @@ function toggleSelect(i) {
     else { S.d[i] = null; Sound.unpick(S.vals[i]); }
     if (!wasValid && !!currentCombo()) Sound.confirm();
     Sound.setLocks(selected());   /* locked dice take the spotlight in the bed */
-    Sound.touch();
   } catch (e) { /* audio must never block the game */ }
   renderDice(); renderPreview(); renderMeta();
 }
@@ -216,7 +213,6 @@ function rollDice(which, done) {
     try {
       const bk = detect(S.vals);   /* the hand on the table picks the bed's chord */
       Sound.setBed(S.vals, bk ? bk.key : 'loose');
-      Sound.touch();
     } catch (e) {}
     if (done) done();
   }, 880);
@@ -266,7 +262,6 @@ els.playBtn.addEventListener('click', () => {
 function playHand(c) {
   counting = true;
   els.playBtn.disabled = true;   /* no re-triggers while the score counts up */
-  try { Sound.touch(); } catch (e) {}
   const t = TYPES[c.key];
   const vals = selected();
   const chips = t.base + c.sum * PIP_CHIPS;
