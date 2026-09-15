@@ -55,6 +55,33 @@ body::after {  /* lamp vignette */
 /* ---------- main layout ---------- */
 .main { flex: 1; min-height: 0; display: flex; gap: 30px; margin-top: 6px; }
 .stage { position: relative; flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+/* the variant tag — this build's one-line manifesto */
+.variant-tag {
+  position: fixed; left: 26px; bottom: 10px; z-index: 1;
+  font-size: 9px; letter-spacing: .2em; text-transform: uppercase;
+  color: color-mix(in srgb, var(--ink-dim) 60%, transparent);
+}
+
+/* ---------- the staff: the player's run, written down as it happens ---------- */
+.score-staff {
+  position: absolute; bottom: 14px; left: 50%; transform: translateX(-50%);
+  width: 344px; height: 100px; pointer-events: none;
+}
+.staff-line {
+  position: absolute; left: 0; right: 0; height: 1px;
+  background: color-mix(in srgb, var(--ink-dim) 40%, transparent);
+}
+.staff-note {
+  position: absolute; width: 11px; height: 11px; border-radius: 50%;
+  background: var(--ink);
+  transition: background .2s, transform .2s;
+}
+.staff-note::after {   /* the stem */
+  content: ""; position: absolute; left: 9px; bottom: 5px;
+  width: 1px; height: 20px; background: var(--ink);
+}
+.staff-note.played { background: var(--gold); transform: scale(1.25); }
+.staff-note.played::after { background: var(--gold); }
 
 /* ---------- dice ---------- */
 .dice { display: flex; gap: 26px; margin-bottom: 26px; flex-wrap: wrap; justify-content: center; }
