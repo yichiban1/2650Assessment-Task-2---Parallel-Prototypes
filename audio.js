@@ -1,8 +1,9 @@
 /**
- * Rolling — Sound Engine.
- * A music box that plays the game: six dice become its pitches, the hand
- * lying on the table becomes its chord, the dice you lock in become its
- * tune. Nothing loops; the box only ever plays what the game asks for.
+ * Rolling — Sound Engine, "The Looper".
+ * The box samples the player: every musical event you cause — the roll's
+ * chord call, each locked-die strum, the payout run — is recorded onto a
+ * loop of tape and played back under the live action. Your moves become
+ * the backing track; every hand records the accompaniment for the next.
  */
 const Sound = (() => {
   let on = false, box, master, rev, mem, hatGain, bp;
@@ -39,10 +40,15 @@ const Sound = (() => {
     five:     [0, 2, 4, 5, 6],
   };
   let chord = { root: 67, tones: [67, 74] };       /* the harmony the table is lying in */
-  let motif = [67, 74, 71];                        /* the figure the bed plays and develops */
+  let motif = [67, 74, 71];                        /* the figure of the current table */
   let land = 79;                                   /* root of the last hand played — where multHit lands */
-  let mood = { p: 0, u: 0 };                       /* progress to target / urgency from hands left */
-  let lastTouch = 0;                               /* any player action wakes the box */
+  /* the tape: events the player caused, replayed as the accompaniment */
+  const LOOP_LEN = 4.5;                            /* seconds of tape — short enough to feel alive */
+  let take = [], loopStart = 0;
+  function record(midi, vel) {                     /* commit a sound to the tape, at its own timing */
+    take.push({ at: (Tone.now() - loopStart) % LOOP_LEN, midi, vel: vel * 0.7 });
+    if (take.length > 24) take.shift();
+  }
 
   /* the table's harmony: straights root on their low end, everything else roots
      on the most repeated die — a pair of 4s literally re-keys the bed onto D */
@@ -99,30 +105,19 @@ const Sound = (() => {
     noise.connect(hatGain); hatGain.connect(bp); bp.connect(master);
 
     // ========================================
-    // The Bed
+    // The Tape
     // ========================================
     /*
-     * Generative, never a loop of pre-made bars. Every bar the bed reads
-     * the game fresh: a low root breathes even when the player is idle,
-     * the figure lands on slots that reshuffle with every roll, and the
-     * closer the target (p) with the fewer hands left (u), the more of
-     * the figure gets played. Sparse input is fine — the box waits, it
-     * does not die.
+     * One loop of the player's own making, spinning under the live
+     * action. A new roll wipes the take — every hand records the
+     * accompaniment for the next one. Even when the player goes quiet,
+     * the last take keeps spinning: sparse input still gets a
+     * soundtrack, and it is always their own.
      */
-    Tone.Transport.bpm.value = 76;
     new Tone.Loop(t => {
-      const idle = Tone.now() - lastTouch > 12;
-      const p = idle ? 0 : mood.p, u = idle ? 0 : mood.u;
-      const busy = idle ? 1 : Math.min(4, 1 + Math.round(p * 2 + u * 1.5));
-      box.triggerAttackRelease(N(chord.root - 12), 1.4, t, idle ? 0.08 : 0.2 + p * 0.05);
-      const slots = [0.75, 1.5, 2.25, 3, 3.5];
-      const off = (chord.root + chord.tones[chord.tones.length - 1]) % slots.length;
-      for (let i = 0; i < busy; i++) {
-        const s = slots[(i + off) % slots.length];
-        const m = i < motif.length ? motif[i] : motif[motif.length - 1] + 12;  /* tail answers on top */
-        box.triggerAttackRelease(N(m), 0.3, t + s, 0.11 + p * 0.05);
-      }
-    }, 4).start(0);
+      loopStart = t;
+      take.forEach(e => box.triggerAttackRelease(N(e.midi), 0.3, t + e.at, e.vel));
+    }, LOOP_LEN).start(0);
     Tone.Transport.start();
     on = true;
   }
@@ -131,25 +126,29 @@ const Sound = (() => {
   // Feeding the Box
   // ========================================
   /*
-   * The game calls in after every event: a roll announces its new chord
-   * out loud, two or more locked dice rewrite the figure, and any action
-   * wakes the box from its idle breathing. The game stays the composer —
-   * the box never plays anything the table did not ask for.
+   * The game calls in after every event, and everything the box says is
+   * recorded to the tape: a roll announces its new chord and starts a
+   * fresh take, two or more locked dice rewrite the figure. The player
+   * stays the composer — the tape is nothing but their own performance,
+   * played back.
    */
-  function setBed(vals, key) {     /* after every roll: the table's new harmony */
+  function setBed(vals, key) {     /* after every roll: announce the chord, wipe the tape, start a new take */
     chord = harmony(vals, key);
     motif = boardMotif();
+    take = [];
     if (!on) return;
     const t = Tone.now() + 0.02;
     box.triggerAttackRelease(N(chord.root - 12), 0.4, t, 0.2);   /* say the new chord out loud */
-    chord.tones.forEach((m, i) => box.triggerAttackRelease(N(m), 0.3, t + 0.09 + i * 0.07, 0.15));
+    record(chord.root - 12, 0.2);
+    chord.tones.forEach((m, i) => {
+      box.triggerAttackRelease(N(m), 0.3, t + 0.09 + i * 0.07, 0.15);
+      record(m, 0.15);
+    });
   }
   function setLocks(vals) {        /* two or more selected dice rewrite the figure */
     const lk = vals.map(v => PENT[v - 1]).sort((a, b) => a - b);
     if (lk.length >= 2) motif = lk.slice(0, 3);
   }
-  function setMood(p, u)   { mood = { p: Math.max(0, Math.min(1, p)), u: Math.max(0, Math.min(1, u)) }; }
-  function touch()         { if (on) lastTouch = Tone.now(); }      /* any action wakes the box */
 
   // ========================================
   // Picking Is Playing
@@ -165,7 +164,10 @@ const Sound = (() => {
     if (!on) return;
     const t = Tone.now();
     const ns = (vals && vals.length ? vals : [v]).map(x => PENT[x - 1]).sort((a, b) => a - b);
-    ns.forEach((m, i) => box.triggerAttackRelease(N(m), 0.18, t + i * 0.06, 0.24));
+    ns.forEach((m, i) => {
+      box.triggerAttackRelease(N(m), 0.18, t + i * 0.06, 0.24);
+      record(m, 0.24);
+    });
   }
   function unpick(v) {         /* released: softer, an octave down */
     if (!on) return;
@@ -175,6 +177,7 @@ const Sound = (() => {
     if (!on) return; const t = Tone.now();
     box.triggerAttackRelease(N(74), 0.2, t, 0.16);
     box.triggerAttackRelease(N(81), 0.25, t + 0.06, 0.14);
+    record(74, 0.16); record(81, 0.14);
   }
   function invalid() { if (on) tick(500, 0.12, undefined, 0.08); }
 
@@ -193,19 +196,25 @@ const Sound = (() => {
     const h = harmony(vals, key);
     land = h.root;
     const t0 = Tone.now() + 0.03;
-    [...vals].sort((a, b) => a - b).forEach((v, i) =>
-      box.triggerAttackRelease(N(PENT[v - 1]), 0.2, t0 + i * 0.07, 0.34));
+    [...vals].sort((a, b) => a - b).forEach((v, i) => {
+      box.triggerAttackRelease(N(PENT[v - 1]), 0.2, t0 + i * 0.07, 0.34);
+      record(PENT[v - 1], 0.34);
+    });
     box.triggerAttackRelease(N(h.root + 12), 0.25, t0 + vals.length * 0.07, 0.3);
+    record(h.root + 12, 0.3);
   }
   function countTick(i) {      /* score climbing: the run rises with the number */
     if (!on) return;
     const m = PENT[i % 6] + 12 * Math.min(2, Math.floor(i / 6));
     box.triggerAttackRelease(N(m), 0.1, Tone.now(), 0.2);
+    record(m, 0.2);
   }
   function multHit() {         /* the multiplier lands on the hand's root and its fifth */
     if (!on) return; const t = Tone.now();
     box.triggerAttackRelease(N(land + 12), 0.2, t, 0.32);
     box.triggerAttackRelease(N(Math.min(deg(land, 4) + 12, 96)), 0.35, t + 0.06, 0.3);
+    record(land + 12, 0.32);
+    record(Math.min(deg(land, 4) + 12, 96), 0.3);
     mem.triggerAttackRelease('G2', 0.06, t, 0.7);
   }
   function respond() {         /* after a hand banks, the bed answers with the figure, up an octave */
@@ -257,7 +266,7 @@ const Sound = (() => {
   }
 
   const mute = m => { if (on) master.mute = m; };
-  return { init, setBed, setLocks, setMood, touch, pick, unpick, confirm, invalid,
+  return { init, setBed, setLocks, pick, unpick, confirm, invalid,
            handNotes, countTick, multHit, respond, winChord, loseFall,
            rollRattle, tick, mute };
 })();
