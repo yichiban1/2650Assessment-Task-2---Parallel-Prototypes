@@ -12,6 +12,7 @@ const els = {
   pName: $('pName'), pMath: $('pMath'), playBtn: $('playBtn'), prog: $('progFill'),
   comboList: $('comboList'), end: $('end'), endName: $('endName'),
   endStats: $('endStats'), help: $('help'), endBest: $('endBest'),
+  staff: $('staffMount'),
 };
 
 // ========================================
@@ -78,6 +79,43 @@ TYPE_ORDER.forEach(k => {
                   '<span class="cdesc">' + t.desc + '</span>';
   els.comboList.appendChild(row);
 });
+
+/* ---------- the staff ---------- */
+/*
+ * The Composer's proof:
+ * every die you lock lands on the staff as a written note, at its own
+ * pitch; playing the hand lights the phrase gold, left to right; a fresh
+ * roll clears the slate. The run leaves visible music behind — behavior
+ * as composition, readable at a glance.
+ */
+const staffNotes = [];
+for (let i = 0; i < 5; i++) {
+  const line = document.createElement('div');
+  line.className = 'staff-line';
+  line.style.bottom = (18 + i * 14) + 'px';
+  els.staff.appendChild(line);
+}
+function staffWrite(v) {
+  const el = document.createElement('div');
+  el.className = 'staff-note';
+  el.style.left = (10 + staffNotes.length * 56) + 'px';
+  el.style.bottom = (12 + (v - 1) * 12) + 'px';
+  els.staff.appendChild(el);
+  staffNotes.push({ v, el });
+}
+function staffUnwrite(v) {
+  const idx = staffNotes.map(n => n.v).lastIndexOf(v);
+  if (idx < 0) return;
+  staffNotes[idx].el.remove();
+  staffNotes.splice(idx, 1);
+}
+function staffClear() {
+  staffNotes.forEach(n => n.el.remove());
+  staffNotes.length = 0;
+}
+function staffPlay() {
+  staffNotes.forEach((n, i) => later(() => n.el.classList.add('played'), 200 + i * 70));
+}
 
 // ========================================
 // Rendering
@@ -169,8 +207,8 @@ function toggleSelect(i) {
   if (!S || S.rolling || counting || S.phase !== 'PLAY') return;
   const wasValid = !!currentCombo();
   try {
-    if (S.d[i] === null) { S.d[i] = S.vals[i]; Sound.pick(S.vals[i], selected()); }
-    else { S.d[i] = null; Sound.unpick(S.vals[i]); }
+    if (S.d[i] === null) { S.d[i] = S.vals[i]; Sound.pick(S.vals[i], selected()); staffWrite(S.vals[i]); }
+    else { S.d[i] = null; Sound.unpick(S.vals[i]); staffUnwrite(S.vals[i]); }
     if (!wasValid && !!currentCombo()) Sound.confirm();
     Sound.setLocks(selected());   /* locked dice take the spotlight in the bed */
     Sound.touch();
@@ -277,6 +315,7 @@ function playHand(c) {
 
   try { Sound.handNotes(vals, c.key); } catch (e) { /* audio must never block the game */ }
   stamp(t.name.toUpperCase(), t.mult >= 4 ? 'gold' : '');
+  staffPlay();
   selIdx.forEach(i => dice[i].d.classList.add('fired'));
 
   /* act one: the chips count up */
@@ -320,6 +359,7 @@ function nextHand() {
   S.d = [null, null, null, null, null, null];
   S.phase = 'ROLL';
   try { Sound.setLocks([]); } catch (e) {}   /* fresh hand, empty spotlight */
+  staffClear();
   msg('fresh dice —');
   rollDice([0, 1, 2, 3, 4, 5], () => {
     S.phase = 'PLAY';
@@ -345,6 +385,7 @@ function newGame() {
   els.end.classList.remove('show');
   els.endBest.textContent = '';
   els.stamp.innerHTML = '';
+  staffClear();
   dice.forEach(({ d }) => { d.classList.remove('sel', 'fired'); });
   renderMeta(); renderPreview();
   nextHand();
