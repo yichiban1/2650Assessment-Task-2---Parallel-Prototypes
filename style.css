@@ -37,6 +37,14 @@ body::after {  /* lamp vignette */
 .ghost:hover { color: var(--ink); border-color: var(--ink); }
 .ghost.gold { color: var(--gold); border-color: var(--gold); }
 
+/*
+ * Information Design — Variant 03, "The Quiet Table":
+ * the radical take: no persistent panels at all. The score and meters
+ * hide behind a small "stats" tag, the glossary behind "the hands" —
+ * nothing is on screen until the player asks for it. What remains is
+ * only the dice and the decisions; the game reads as one calm, felt
+ * object instead of a wall of numbers.
+ */
 /* ---------- the peeks: everything hides until asked for ---------- */
 .peek { position: fixed; z-index: 5; }
 .peek-handle {
