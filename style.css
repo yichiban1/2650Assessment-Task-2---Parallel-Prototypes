@@ -37,6 +37,14 @@ body::after {  /* lamp vignette */
 .ghost:hover { color: var(--ink); border-color: var(--ink); }
 .ghost.gold { color: var(--gold); border-color: var(--gold); }
 
+/*
+ * Information Design — Variant 01, "One Left Rail":
+ * the default build scatters the game's numbers — a scorebar up top, a
+ * table of hands on the right. This variant gathers everything into a
+ * single column on the left, Balatro-style: score, meters and glossary
+ * stacked top to bottom, so the stage keeps the whole remaining width.
+ * One rail, one glance, and the dice stay the hero of the screen.
+ */
 /* ---------- left rail: score, meters and glossary stacked in one column ---------- */
 .combos {
   width: 252px; flex: none; display: flex; flex-direction: column; gap: 20px;
