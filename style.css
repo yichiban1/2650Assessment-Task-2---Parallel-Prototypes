@@ -37,6 +37,14 @@ body::after {  /* lamp vignette */
 .ghost:hover { color: var(--ink); border-color: var(--ink); }
 .ghost.gold { color: var(--gold); border-color: var(--gold); }
 
+/*
+ * Information Design — Variant 02, "The Top Dashboard":
+ * the same idea as the left rail, turned horizontal. Every meter lives
+ * in one strip under the brand, and the glossary flattens into a
+ * paytable running along the bottom edge. The stage between them is
+ * pure play space — nothing competes with the dice for the middle of
+ * the screen.
+ */
 /* ---------- the dashboard: every meter in one strip under the brand ---------- */
 .dash { display: flex; justify-content: space-between; align-items: flex-end; margin-top: 10px; }
 .dash-score { display: flex; align-items: baseline; gap: 14px; }
